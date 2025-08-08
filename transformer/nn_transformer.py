@@ -20,7 +20,9 @@
 
 import math
 import time
-import numpy as np
+from abc import ABC, abstractmethod
+from enum import auto, Enum
+
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -265,37 +267,59 @@ class WordConverter:
         return "".join([self.i2c[i] for i in li])
 
 
-class TalesLoader:
-    TALE_STORY_TAG = "[STORY]"
-    TALE_BEGIN_TAG = "[START]"
-    TALE_END_TAG = "[END]"
+class TrainingDataLoader(ABC):
+    BEGIN_TAG = "[START]"
+    END_TAG = "[END]"
 
     def __init__(self, file_name):
         self.file_name = file_name
-        self.tales = []
+
+    def _print_info(self, text, vocab):
+        print(f"Training data successfully loaded from file: {self.file_name}")
+        print(f" - Total length: {len(text)}")
+        print(f" - Vocabulary length: {len(vocab)}")
+
+    @abstractmethod
+    def load(self):
+        pass
+
+
+class ShakespeareLoader(TrainingDataLoader):
+    def load(self):
+        with open(self.file_name, "r") as f:
+            text = self.BEGIN_TAG + f.read() + self.END_TAG
+        vocab = sorted(list(set(text)))
+
+        self._print_info(text, vocab)
+
+        return text, vocab
+
+
+class FairyTalesLoader(TrainingDataLoader):
+    STORY_TAG = "[STORY]"
 
     def load(self):
+        tales = []
+
         df = pd.read_csv(self.file_name)
         for i, row in df.iterrows():
             title = row['Title']
             story = row['Text'].strip()
-            self.tales.append(
-                f"{self.TALE_BEGIN_TAG} {title} {self.TALE_STORY_TAG} {story} {self.TALE_END_TAG}"
+            tales.append(
+                f"{self.BEGIN_TAG} {title} {self.STORY_TAG} {story} {self.END_TAG}"
             )
 
-    def get_tales(self, num=-1):
-        if num > 0 and num < len(self.tales):
-            tales = "\n".join(self.tales[:num])
-        else:
-            tales = "\n".join(self.tales)
+        tales = "\n".join(tales)
         vocab = sorted(list(set(tales)))
+
+        self._print_info(tales, vocab)
 
         return tales, vocab
 
 
-class TalesDataset(Dataset):
-    def __init__(self, tales, seq_len, wconv):
-        self.sequences = self.__get_sequences(tales, seq_len)
+class TextDataset(Dataset):
+    def __init__(self, text, seq_len, wconv):
+        self.sequences = self.__get_sequences(text, seq_len)
         self.wconv = wconv
 
     def __len__(self):
@@ -308,20 +332,20 @@ class TalesDataset(Dataset):
         return x, y
 
     @staticmethod
-    def __get_sequences(tales, seq_len):
+    def __get_sequences(text, seq_len):
         sequences = []
-        for i in range(0, len(tales) - seq_len, seq_len // 2):
+        for i in range(0, len(text) - seq_len, seq_len // 2):
             # 50% overlap between sequences
-            sequences.append(tales[i:i+seq_len])
+            sequences.append(text[i:i+seq_len])
         return sequences
 
 
 class ModelTrainer:
     ITER_PRINT = 1
 
-    def __init__(self, model, tales, vocab, lr, params_file_name):
+    def __init__(self, model, text, vocab, lr, params_file_name):
         self.model = model
-        self.tales = tales
+        self.text = text
         self.params_file_name = params_file_name
         self.vocab_size = len(vocab)
         self.word_conv = WordConverter(vocab)
@@ -353,7 +377,7 @@ class ModelTrainer:
     def __train(self, batch_size, seq_len, loss_target):
         self.model.train()
 
-        dataset = TalesDataset(self.tales, seq_len, self.word_conv)
+        dataset = TextDataset(self.text, seq_len, self.word_conv)
         loader = DataLoader(
             dataset,
             batch_size=batch_size,
@@ -363,7 +387,6 @@ class ModelTrainer:
         )
 
         print(f"""Training started:
- - Total length: {len(self.tales)}
  - Total sequences: {len(dataset)}
  - Batch size: {batch_size}
  - Sequence length: {seq_len}
@@ -434,18 +457,19 @@ class ModelTrainer:
         return lr_scheduler.LambdaLR(optimizer, lr_fct)
 
 
-class TaleGenerator:
-    def __init__(self, model, vocab):
+class TextGenerator:
+    def __init__(self, model, vocab, seq_len):
         self.model = model
+        self.seq_len = seq_len
         self.word_conv = WordConverter(vocab)
 
     @torch.no_grad()
-    def generate_tale(self, temp=0.7, max_len=20000, top_k=40):
+    def generate_text(self, start_tag, end_tag, temp=1.0, max_len=50000, top_k=40):
         self.model.eval()
 
-        tale = TalesLoader.TALE_BEGIN_TAG
+        text = start_tag
         while True:
-            seq = tale[-SEQ_LEN:]
+            seq = text[-self.seq_len:]
             seq_enc = self.word_conv.encode_t(seq).to(Device.get())
 
             # batch_size, seq_len, vocab_size
@@ -463,16 +487,16 @@ class TaleGenerator:
 
             next_char = self.word_conv.decode([next_char_enc])
 
-            tale += next_char
+            text += next_char
             print(next_char, end="", flush=True)
 
-            if len(tale) > max_len or TalesLoader.TALE_END_TAG in tale:
+            if len(text) > max_len or end_tag in text:
                 break
 
         print("")
 
 
-def compute_model_parameters(n_layers, d_model, d_ff):
+def compute_model_parameters_num(n_layers, d_model, d_ff):
     mha = (d_model * d_model * 3) + (d_model * d_model)
     ff = (d_model * d_ff) * 2
     ln = (d_model * 2) * 2
@@ -484,57 +508,68 @@ def compute_model_parameters(n_layers, d_model, d_ff):
 # Main
 #
 
-BATCH_SIZE = 256
-SEQ_LEN = 128
-N_LAYERS = 8
-D_MODEL = 768
-N_HEAD = 12
-D_FF = 2048
-LEARN_RATE_INIT = 1e-3
-LOSS_TARGET = 0.5
-PARAMS_FILE_NAME = f"params_{BATCH_SIZE}_{SEQ_LEN}__{N_LAYERS}_{D_MODEL}_{N_HEAD}_{D_FF}.pth"
-TALES_NUM = -1
+def main():
+    class TrainingDataTypes(Enum):
+        FAIRY_TALES = auto()
+        SHAKESPEARE = auto()
 
-print(f"""Model:
+    TRAINING_DATA_LOADERS = {
+        TrainingDataTypes.FAIRY_TALES: { "loader": FairyTalesLoader, "file": "tales.csv" },
+        TrainingDataTypes.SHAKESPEARE: { "loader": ShakespeareLoader, "file": "shakespeare.txt"},
+    }
+    BATCH_SIZE = 256
+    SEQ_LEN = 128
+    N_LAYERS = 8
+    D_MODEL = 512
+    N_HEAD = 8
+    D_FF = 2048
+    LEARN_RATE = 1e-3
+    LOSS_TARGET = 0.5
+    TRAINING_DATA_TYPE = TrainingDataTypes.FAIRY_TALES
+    PARAMS_FILE_NAME = f"params_{TRAINING_DATA_TYPE.name.lower()}_b{BATCH_SIZE}_s{SEQ_LEN}__l{N_LAYERS}_m{D_MODEL}_h{N_HEAD}_f{D_FF}.pth"
+
+    print(f"""Model:
  - n_layer: {N_LAYERS}
  - d_model: {D_MODEL}
  - n_head: {N_HEAD}
  - d_ff: {D_FF}
- - Total parameters: {compute_model_parameters(N_LAYERS, D_MODEL, D_FF)}
+ - Total parameters: {compute_model_parameters_num(N_LAYERS, D_MODEL, D_FF)}
 """)
 
-np.random.seed(0)
-torch.manual_seed(1)
+    torch.manual_seed(0)
 
-Device.init()
+    Device.init()
 
-tales_loader = TalesLoader("tales.csv")
-tales_loader.load()
-tales, vocab = tales_loader.get_tales(TALES_NUM)
-model = TransformerDecoderOnly(
-    len(vocab),
-    SEQ_LEN,
-    n_layers=N_LAYERS,
-    d_model=D_MODEL,
-    n_head=N_HEAD,
-    d_ff=D_FF
-).to(Device.get())
+    training_data_loader = TRAINING_DATA_LOADERS[TRAINING_DATA_TYPE]["loader"](TRAINING_DATA_LOADERS[TRAINING_DATA_TYPE]["file"])
+    text, vocab = training_data_loader.load()
+    model = TransformerDecoderOnly(
+        len(vocab),
+        SEQ_LEN,
+        n_layers=N_LAYERS,
+        d_model=D_MODEL,
+        n_head=N_HEAD,
+        d_ff=D_FF
+    ).to(Device.get())
 
-model_trainer = ModelTrainer(model, tales, vocab, LEARN_RATE_INIT, PARAMS_FILE_NAME)
-if model_trainer.load_params():
-    answer = input(f"Model parameters successfully loaded from file {PARAMS_FILE_NAME}.\nTrain the model anyway? (y/n) ")
-    train_model = answer.lower() in ["y", "yes"]
-else:
-    print(f"Unable to load model parameters from file {PARAMS_FILE_NAME}")
-    train_model = True
-
-if train_model:
-    model_trainer.train(BATCH_SIZE, SEQ_LEN, LOSS_TARGET)
-    if model_trainer.save_params():
-        print(f"Model parameters successfully saved to: {PARAMS_FILE_NAME}")
+    model_trainer = ModelTrainer(model, text, vocab, LEARN_RATE, PARAMS_FILE_NAME)
+    if model_trainer.load_params():
+        answer = input(f"Model parameters successfully loaded from file {PARAMS_FILE_NAME}.\nTrain the model anyway? (y/n) ")
+        train_model = answer.lower() in ["y", "yes"]
     else:
-        print("Unable to save model parameters")
+        print(f"Unable to load model parameters from file {PARAMS_FILE_NAME}")
+        train_model = True
 
-print("Generated tale:")
-tale_gen = TaleGenerator(model, vocab)
-tale_gen.generate_tale()
+    if train_model:
+        model_trainer.train(BATCH_SIZE, SEQ_LEN, LOSS_TARGET)
+        if model_trainer.save_params():
+            print(f"Model parameters successfully saved to: {PARAMS_FILE_NAME}")
+        else:
+            print("Unable to save model parameters")
+
+    print("Generated text:")
+    text_gen = TextGenerator(model, vocab, SEQ_LEN)
+    text_gen.generate_text(training_data_loader.BEGIN_TAG, training_data_loader.END_TAG)
+
+
+if __name__ == "__main__":
+    main()

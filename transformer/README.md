@@ -1,7 +1,7 @@
 # Transformer
 
 Decoder-only transformer implemented from scratch following the "Attention Is All You Need" paper.
-The only difference from the paper is that in Add&Norm the LayerNorm is applied before the layer, which is proven to improve training performance.\
+The only difference from the paper is that in `Add&Norm` the `LayerNorm` is applied before the layer, which is proven to improve training performance.\
 The transformer is trained to tell fairy tales, using around 60 fairy tales from the `tales.csv` file.\
 CUDA is used to speed up the training.
 

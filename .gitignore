@@ -1,0 +1,24 @@
+# Byte-compiled
+*~
+*.pyc
+*.pyo
+__pycache__/
+
+# Distribution
+build/
+dist/
+eggs/
+.eggs/
+sdist/
+*.egg-info/
+*.egg
+
+# Environments
+.idea
+.env
+.venv
+env/
+venv/
+
+# pytorch parameters
+*.pth

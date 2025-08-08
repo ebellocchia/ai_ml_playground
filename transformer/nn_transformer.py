@@ -311,6 +311,7 @@ class TalesDataset(Dataset):
     def __get_sequences(tales, seq_len):
         sequences = []
         for i in range(0, len(tales) - seq_len, seq_len // 2):
+            # 50% overlap between sequences
             sequences.append(tales[i:i+seq_len])
         return sequences
 

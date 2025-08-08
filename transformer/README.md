@@ -5,6 +5,6 @@ The only difference from the paper is that in `Add&Norm` the `LayerNorm` is appl
 The transformer is trained to tell fairy tales, using around 60 fairy tales from the `tales.csv` file.\
 CUDA is used to speed up the training.
 
-The current implementation works character by character and the context length is 128 characters, so the generated output sounds like a fairy tale but the plot is not consistent and some sentences don't really make sense (which is normal with this kind of implementation).\
+The current implementation works character by character and the context length is 128 characters, so the generated output sounds like a fairy tale but the plot is not consistent and some sentences don't really make sense (which is normal with this kind of training).\
 There is also not much variety in the tales because the dataset is small.\
 Next step is using a tokenizer instead of working character by character.

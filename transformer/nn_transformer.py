@@ -469,7 +469,6 @@ class TaleGenerator:
                 break
 
         print("")
-        return tale
 
 
 def compute_model_parameters(n_layers, d_model, d_ff):
@@ -537,4 +536,4 @@ if train_model:
 
 print("Generated tale:")
 tale_gen = TaleGenerator(model, vocab)
-gen_tale = tale_gen.generate_tale()
+tale_gen.generate_tale()

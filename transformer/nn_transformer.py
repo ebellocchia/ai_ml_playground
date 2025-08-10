@@ -275,9 +275,10 @@ class TrainingDataLoader(ABC):
         self.file_name = file_name
 
     def _print_info(self, text, vocab):
-        print(f"Training data successfully loaded from file: {self.file_name}")
-        print(f" - Total length: {len(text)}")
-        print(f" - Vocabulary length: {len(vocab)}")
+        print(f"""Training data successfully loaded from file: {self.file_name}
+- Total length: {len(text)}
+- Vocabulary length: {len(vocab)}
+""")
 
     @abstractmethod
     def load(self):
@@ -568,7 +569,7 @@ def main():
 
     print("Generated text:")
     text_gen = TextGenerator(model, vocab, SEQ_LEN)
-    text_gen.generate_text(training_data_loader.BEGIN_TAG, training_data_loader.END_TAG)
+    text_gen.generate_text(TrainingDataLoader.BEGIN_TAG, TrainingDataLoader.END_TAG)
 
 
 if __name__ == "__main__":

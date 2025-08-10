@@ -8,7 +8,7 @@ The transformer can be trained to:
 
 CUDA is used to speed up the training. Being a small model, I trained it on my laptop (NVIDIA RTX 4090 Mobile).
 
-The current implementation works character by character and the context length is 128 characters, so the generated output sounds like a fairy tale or shakespeare writing, but the plot is not consistent and sentences don't really make sense (which is normal with this kind of training).\
+The current implementation works character-by-character and the context length is 128 characters, so the generated output sounds like a fairy tale or a shakespeare writing, but the plot is not consistent and sentences don't really make sense (which is normal with a character-by-character training).\
 There is also not much variety because the dataset is small.\
 
 Next step is using a tokenizer instead of working character by character.

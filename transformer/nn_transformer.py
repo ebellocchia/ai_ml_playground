@@ -531,7 +531,7 @@ def main():
     LEARN_RATE = 1e-3
     LOSS_TARGET = 0.5
     TRAINING_DATA_TYPE = TrainingDataTypes.FAIRY_TALES
-    PARAMS_FILE_NAME = f"params_{TRAINING_DATA_TYPE.name.lower()}_b{BATCH_SIZE}_s{SEQ_LEN}__l{N_LAYERS}_m{D_MODEL}_h{N_HEAD}_f{D_FF}.pth"
+    PARAMS_FILE_NAME = f"params_cbc_{TRAINING_DATA_TYPE.name.lower()}_b{BATCH_SIZE}_s{SEQ_LEN}__l{N_LAYERS}_m{D_MODEL}_h{N_HEAD}_f{D_FF}.pth"
 
     print(f"""Model:
  - n_layer: {N_LAYERS}

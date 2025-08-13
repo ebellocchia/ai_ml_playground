@@ -226,30 +226,8 @@ class TransformerDecoderOnly(nn.Module):
 
 
 #
-# Model training
+# Dataset
 #
-
-class Device:
-    @staticmethod
-    def get():
-        return "cuda" if torch.cuda.is_available() else "cpu"
-
-    @staticmethod
-    def is_cuda():
-        return Device.get() == "cuda"
-
-    @staticmethod
-    def init():
-        if Device.is_cuda():
-            torch.backends.cudnn.benchmark = True
-            torch.cuda.empty_cache()
-
-    @staticmethod
-    def print_info():
-        if Device.is_cuda():
-            print(f" GPU memory (allocated): {torch.cuda.memory_allocated(0) / 1e9:.2f}GB")
-            print(f" GPU memory (cached): {torch.cuda.memory_reserved(0) / 1e9:.2f}GB")
-
 
 class WordConverter:
     def __init__(self, vocab):
@@ -339,6 +317,32 @@ class TextDataset(Dataset):
             # 50% overlap between sequences
             sequences.append(text[i:i+seq_len])
         return sequences
+
+
+#
+# Model training
+#
+
+class Device:
+    @staticmethod
+    def get():
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
+    @staticmethod
+    def is_cuda():
+        return Device.get() == "cuda"
+
+    @staticmethod
+    def init():
+        if Device.is_cuda():
+            torch.backends.cudnn.benchmark = True
+            torch.cuda.empty_cache()
+
+    @staticmethod
+    def print_info():
+        if Device.is_cuda():
+            print(f" GPU memory (allocated): {torch.cuda.memory_allocated(0) / 1e9:.2f}GB")
+            print(f" GPU memory (cached): {torch.cuda.memory_reserved(0) / 1e9:.2f}GB")
 
 
 class ModelTrainer:

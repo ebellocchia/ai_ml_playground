@@ -206,8 +206,8 @@ class DecoderOnly(nn.Module):
         return self.norm(x)
 
     def __casual_mask(self, x):
-      batch_size, seq_len, d_model = x.shape
-      return self.casual_mask[:seq_len, :seq_len]
+        batch_size, seq_len, d_model = x.shape
+        return self.casual_mask[:seq_len, :seq_len]
 
 
 class TransformerDecoderOnly(nn.Module):

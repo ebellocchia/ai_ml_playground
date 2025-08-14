@@ -199,15 +199,22 @@ class DecoderOnly(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.register_buffer("casual_mask", torch.tril(torch.ones(seq_max_len, seq_max_len)))
 
-    def forward(self, x):
+    def forward(self, x, attention_mask=None):
         casual_mask = self.__casual_mask(x)
         for layer in self.layers:
-          x = layer(x, casual_mask)
+            x = layer(x, self.__combine_masks(casual_mask, attention_mask))
         return self.norm(x)
 
     def __casual_mask(self, x):
         batch_size, seq_len, d_model = x.shape
         return self.casual_mask[:seq_len, :seq_len]
+
+    def __combine_masks(self, casual_mask, attention_mask):
+        if attention_mask is None:
+            return casual_mask
+        # casual_mask    -> seq_len, seq_len
+        # attention_mask -> batch_size, seq_len
+        return casual_mask * attention_mask.unsqueeze(1)
 
 
 class TransformerDecoderOnly(nn.Module):
@@ -218,10 +225,10 @@ class TransformerDecoderOnly(nn.Module):
         self.decoder = DecoderOnly(seq_max_len, n_layers, d_model, n_head, d_ff, dropout)
         self.proj = Projection(d_model, vocab_size)
 
-    def forward(self, x):
+    def forward(self, x, attention_mask=None):
         emb = self.input_emb(x)
         pe = self.pos_enc(emb)
-        dec = self.decoder(pe)
+        dec = self.decoder(pe, attention_mask)
         return self.proj(dec)
 
 

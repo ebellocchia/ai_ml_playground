@@ -235,6 +235,10 @@ class ModelTrainer:
         return self.optimizer.param_groups[0]["lr"]
 
 
+#
+# Generator
+#
+
 class WordGenerator:
     def __init__(self, model, vocab):
         self.model = model
@@ -260,7 +264,6 @@ class WordGenerator:
                 break
             word += next_char
         return word
-
 
 
 #

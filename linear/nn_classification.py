@@ -84,7 +84,8 @@ for epoch in range(epoch_num + 1):
     scheduler.step()
 
     if epoch % epoch_print == 0:
-        print(f"{epoch}. Loss: {loss_sum / num_batches:.6f}, lr: {scheduler.get_last_lr()[0]:.6f}")
+        loss_mean = loss_sum / num_batches
+        print(f"{epoch}. Loss: {loss_mean:.6f}, lr: {scheduler.get_last_lr()[0]:.6f}")
 
 
 #
@@ -98,7 +99,7 @@ def compute_outputs(m, x):
     return (yps > 0.5).float()
 
 ypn = compute_outputs(mlp, x)
-print(all([(pred == asked).item() for pred, asked in zip(y, ypn)]))
+print("Output matches:", all([(pred == asked).item() for pred, asked in zip(y, ypn)]))
 
 
 h = 0.01

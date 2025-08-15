@@ -490,13 +490,13 @@ class ModelTrainer:
  - Device: {Device.get()}
 """)
 
+        batches_num = len(loader)
         epoch_num = 1
         loss_mean_last = 0.0
         last_time = time.time()
 
         while True:
             loss_sum = 0.0
-            num_batches = 0
             for batch in loader:
                 # x, y -> batch_size, seq_len
                 x = batch["x"].to(Device.get())
@@ -514,11 +514,10 @@ class ModelTrainer:
                 self.scaler.update()
 
                 loss_sum += loss.item()
-                num_batches += 1
 
             self.scheduler.step()
 
-            loss_mean = loss_sum / num_batches
+            loss_mean = loss_sum / batches_num
             if loss_mean < loss_target:
                 print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}, lr: {self.__get_lr():.5f}")
                 break

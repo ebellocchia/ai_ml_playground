@@ -165,16 +165,6 @@ class ModelTrainer:
         )
 
     def train(self, batch_size, loss_target):
-        print(f"""Training started:
- - Words: {len(self.words)}
- - Batch size: {batch_size}
- - Target loss: {loss_target}
- - Learning rate: {self.__get_lr()}
- - Model: {self.model.hid.__class__.__name__}
- - Criterion: {self.criterion.__class__.__name__}
- - Optimizer: {self.optimizer.__class__.__name__}
- - Device: {Device.get()}
-""")
         self.model.train()
 
         dataset = WordDataset(self.words, self.word_conv)
@@ -187,13 +177,24 @@ class ModelTrainer:
             collate_fn=lambda batch: dataset.collate_batch(batch)
         )
 
+        print(f"""Training started:
+ - Words number: {len(dataset)}
+ - Batch size: {batch_size}
+ - Target loss: {loss_target}
+ - Learning rate: {self.__get_lr()}
+ - Model: {self.model.hid.__class__.__name__}
+ - Criterion: {self.criterion.__class__.__name__}
+ - Optimizer: {self.optimizer.__class__.__name__}
+ - Device: {Device.get()}
+""")
+
+        batches_num = len(loader)
         epoch_num = 1
         last_time = time.time()
         loss_mean_last = 0.0
 
         while True:
             loss_sum = 0.0
-            num_batches = 0
             for x, y in loader:
                 # x, y -> seq_len * batch_size
                 x, y = x.to(Device.get()), y.to(Device.get())
@@ -210,9 +211,8 @@ class ModelTrainer:
                 self.optimizer.step()
 
                 loss_sum += loss.item()
-                num_batches += 1
 
-            loss_mean = loss_sum / num_batches
+            loss_mean = loss_sum / batches_num
             if loss_mean < loss_target:
                 print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}")
                 break

@@ -168,11 +168,12 @@ class ModelTrainer:
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True, collate_fn=WordDataset.collate_batch)
 
         epoch_num = 1
-        iter_num = 1
-        loss_mean_last = 0.0
-        loss_sum = 0.0
         last_time = time.time()
+        loss_mean_last = 0.0
+
         while True:
+            loss_sum = 0.0
+            num_batches = 0
             for x, y in loader:
                 # x, y -> seq_len * batch_size
                 x, y = x.to(Device.get()), y.to(Device.get())
@@ -188,9 +189,13 @@ class ModelTrainer:
                 loss.backward()
                 self.optimizer.step()
 
-                loss_sum += loss
-                loss_mean = loss_sum / iter_num
-                iter_num += 1
+                loss_sum += loss.item()
+                num_batches += 1
+
+            loss_mean = loss_sum / num_batches
+            if loss_mean < loss_target:
+                print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}")
+                break
 
             if epoch_num % self.EPOCH_PRINT == 0:
                 loss_mean_diff = loss_mean_last - loss_mean
@@ -201,10 +206,6 @@ class ModelTrainer:
                 last_time = curr_time
 
                 print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}, time: {elapsed_time:.3f}s")
-
-            if loss_mean < loss_target:
-                print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}")
-                break
 
             epoch_num += 1
 
@@ -247,7 +248,7 @@ class WordGenerator:
 def main():
     BATCH_SIZE = 128
     LEARN_RATE_INIT = 1e-2
-    LOSS_TARGET = 0.85
+    LOSS_TARGET = 0.75
     GEN_NAMES_NUM = 30
     WORDS_NUM = -1
 

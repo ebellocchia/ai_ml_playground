@@ -19,7 +19,6 @@
 # THE SOFTWARE.
 
 import time
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -70,14 +69,8 @@ class MLP(nn.Module):
 
 
 #
-# Model training
+# Dataset
 #
-
-class Device:
-    @staticmethod
-    def get():
-        return "cuda" if torch.cuda.is_available() else "cpu"
-
 
 class WordConverter:
     def __init__(self, vocab):
@@ -113,9 +106,10 @@ class WordLoader:
 
     def get_words(self, max_num=-1):
         if max_num > 0 and max_num < len(self.words):
-            words = np.random.choice(self.words, max_num)
+            indices = torch.randperm(len(self.words))[:max_num]
+            words = [self.words[i] for i in indices]
         else:
-            words = np.array(self.words)
+            words = self.words
         vocab = sorted(list(set("".join(words))))
         return words, vocab
 
@@ -141,6 +135,16 @@ class WordDataset(Dataset):
         xs_pad = pad_sequence(xs, batch_first=False, padding_value=pad_value)
         ys_pad = pad_sequence(ys, batch_first=False, padding_value=pad_value)
         return xs_pad, ys_pad
+
+
+#
+# Model training
+#
+
+class Device:
+    @staticmethod
+    def get():
+        return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class ModelTrainer:
@@ -178,6 +182,7 @@ class ModelTrainer:
             dataset,
             batch_size=batch_size,
             shuffle=True,
+            pin_memory=True,
             drop_last=True,
             collate_fn=lambda batch: dataset.collate_batch(batch)
         )
@@ -269,12 +274,12 @@ def main():
     GEN_NAMES_NUM = 30
     WORDS_NUM = -1
 
-    np.random.seed(0)
     torch.manual_seed(0)
 
     word_loader = WordLoader("names.txt")
     word_loader.load()
     words, vocab = word_loader.get_words(WORDS_NUM)
+
     model = RNN(len(vocab), nn.LSTM).to(Device.get())
 
     model_trainer = ModelTrainer(model, words, vocab, LEARN_RATE_INIT)

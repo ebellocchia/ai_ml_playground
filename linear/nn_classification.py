@@ -58,6 +58,7 @@ scheduler = lr_scheduler.LinearLR(
 #
 # Training
 #
+
 mlp.train()
 
 batch_size = 8
@@ -91,6 +92,7 @@ for epoch in range(epoch_num + 1):
 #
 # Check results
 #
+
 @torch.no_grad()
 def compute_outputs(m, x):
     m.eval()
@@ -101,6 +103,10 @@ def compute_outputs(m, x):
 ypn = compute_outputs(mlp, x)
 print("Output matches:", all([(pred == asked).item() for pred, asked in zip(y, ypn)]))
 
+
+#
+# Plot graph
+#
 
 h = 0.01
 coord_ext = 1

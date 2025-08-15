@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -66,7 +65,7 @@ class MLP(nn.Module):
 
 
 #
-# Model training
+# Dataset
 #
 
 class WordConverter:
@@ -103,15 +102,20 @@ class WordLoader:
 
     def get_words(self, max_num=-1):
         if max_num > 0 and max_num < len(self.words):
-            words = np.random.choice(self.words, max_num)
+            indices = torch.randperm(len(self.words))[:max_num]
+            words = [self.words[i] for i in indices]
         else:
-            words = np.array(self.words)
+            words = self.words
         vocab = sorted(list(set("".join(words))))
         return words, vocab
 
 
+#
+# Model training
+#
+
 class ModelTrainer:
-    EPOCH_PRINT = 500
+    EPOCH_PRINT = 1
 
     def __init__(self, model, words, vocab, lr):
         self.model = model
@@ -131,39 +135,47 @@ class ModelTrainer:
 """)
         self.model.train()
 
-        i = 1
+        epoch_num = 1
         loss_mean_last = 0.0
-        loss_sum = 0.0
+
         while True:
-            rw = np.random.choice(self.words)
-            x = self.word_conv.encode_t(rw[:-1])
-            y = self.word_conv.encode_t(rw[1:])
+            loss_sum = 0.0
+            num_batches = 0
+            for i in range(0, len(self.words)):
+                word = self.words[i]
+                x = self.word_conv.encode_t(word[:-1])
+                y = self.word_conv.encode_t(word[1:])
 
-            out, _ = self.model(x)
-            #loss = criterion(F.log_softmax(out, dim=1), y)
-            loss = self.criterion(out, y)
+                out, _ = self.model(x)
+                #loss = criterion(F.log_softmax(out, dim=1), y)
+                loss = self.criterion(out, y)
 
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
 
-            loss_sum += loss
-            loss_mean = loss_sum / i
+                loss_sum += loss.item()
+                num_batches += 1
 
-            if i % self.EPOCH_PRINT == 0:
-                loss_mean_diff = loss_mean_last - loss_mean
-                loss_mean_last = loss_mean
-                print(f"{i}. Loss: {loss:.7f}, mean: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}")
-
+            loss_mean = loss_sum / num_batches
             if loss_mean < loss_target:
-                print(f"{i}. Target loss reached, stopped. Loss: {loss:.6f}, mean: {loss_mean:.6f}")
+                print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}")
                 break
 
-            i += 1
+            if epoch_num % self.EPOCH_PRINT == 0:
+                loss_mean_diff = loss_mean_last - loss_mean
+                loss_mean_last = loss_mean
+                print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}")
+
+            epoch_num += 1
 
     def __get_lr(self):
         return self.optimizer.param_groups[0]["lr"]
 
+
+#
+# Generator
+#
 
 class WordGenerator:
     def __init__(self, model, vocab):
@@ -198,11 +210,10 @@ class WordGenerator:
 
 def main():
     LEARN_RATE_INIT = 1e-2
-    LOSS_TARGET = 2.2
+    LOSS_TARGET = 1.5
     GEN_NAMES_NUM = 30
-    WORDS_NUM = 1000
+    WORDS_NUM = 500
 
-    np.random.seed(0)
     torch.manual_seed(0)
 
     word_loader = WordLoader("names.txt")

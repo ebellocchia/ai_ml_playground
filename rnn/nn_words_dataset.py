@@ -142,7 +142,7 @@ class WordDataset(Dataset):
 
 
 class ModelTrainer:
-    ITER_PRINT = 10
+    EPOCH_PRINT = 10
 
     def __init__(self, model, words, vocab, lr):
         self.model = model
@@ -192,7 +192,7 @@ class ModelTrainer:
                 loss_mean = loss_sum / iter_num
                 iter_num += 1
 
-            if epoch_num % self.ITER_PRINT == 0:
+            if epoch_num % self.EPOCH_PRINT == 0:
                 loss_mean_diff = loss_mean_last - loss_mean
                 loss_mean_last = loss_mean
 

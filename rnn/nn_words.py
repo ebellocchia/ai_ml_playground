@@ -111,7 +111,7 @@ class WordLoader:
 
 
 class ModelTrainer:
-    ITER_PRINT = 500
+    EPOCH_PRINT = 500
 
     def __init__(self, model, words, vocab, lr):
         self.model = model
@@ -150,7 +150,7 @@ class ModelTrainer:
             loss_sum += loss
             loss_mean = loss_sum / i
 
-            if i % self.ITER_PRINT == 0:
+            if i % self.EPOCH_PRINT == 0:
                 loss_mean_diff = loss_mean_last - loss_mean
                 loss_mean_last = loss_mean
                 print(f"{i}. Loss: {loss:.7f}, mean: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}")

@@ -28,15 +28,15 @@ from sklearn.datasets import make_moons
 
 
 class MLP(nn.Sequential):
-    def __init__(self):
+    def __init__(self, n_in, n_out):
         super().__init__(
-            nn.Linear(2, 16),
+            nn.Linear(n_in, 16),
             nn.Tanh(),
             nn.Linear(16, 32),
             nn.Tanh(),
             nn.Linear(32, 16),
             nn.Tanh(),
-            nn.Linear(16, 1),
+            nn.Linear(16, n_out),
         )
 
 
@@ -45,7 +45,7 @@ x_list, y_list = make_moons(n_samples=200, noise=0.05)
 x = torch.tensor(x_list).float()
 y = torch.tensor(y_list).float().unsqueeze(1)
 
-mlp = MLP()
+mlp = MLP(2, 1)
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.SGD(mlp.parameters(), lr=1e-2, momentum=0.9, weight_decay=1e-4)
 scheduler = lr_scheduler.LinearLR(

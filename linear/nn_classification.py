@@ -64,8 +64,8 @@ batch_size = 8
 epoch_print = 5
 epoch_num = 100
 for epoch in range(epoch_num + 1):
-
     ir = torch.randperm(x.shape[0])
+
     loss_sum = 0
     num_batches = 0
     for i in range(0, x.shape[0], batch_size):
@@ -84,7 +84,7 @@ for epoch in range(epoch_num + 1):
     scheduler.step()
 
     if epoch % epoch_print == 0:
-        print(f"{epoch}. Loss: {loss_sum / num_batches}, lr: {scheduler.get_last_lr()[0]}")
+        print(f"{epoch}. Loss: {loss_sum / num_batches:.6f}, lr: {scheduler.get_last_lr()[0]:.6f}")
 
 
 #

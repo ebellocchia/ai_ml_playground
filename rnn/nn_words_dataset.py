@@ -133,11 +133,12 @@ class WordDataset(Dataset):
         y = self.word_conv.encode_t(word[1:])
         return x, y
 
-    @staticmethod
-    def collate_batch(batch):
+    def collate_batch(self, batch):
+        pad_value = self.word_conv.encode(WordLoader.WORD_END_CHAR)
+
         xs, ys = zip(*batch)
-        xs_pad = pad_sequence(xs, batch_first=False, padding_value=1)
-        ys_pad = pad_sequence(ys, batch_first=False, padding_value=1)
+        xs_pad = pad_sequence(xs, batch_first=False, padding_value=pad_value)
+        ys_pad = pad_sequence(ys, batch_first=False, padding_value=pad_value)
         return xs_pad, ys_pad
 
 
@@ -165,7 +166,7 @@ class ModelTrainer:
         self.model.train()
 
         dataset = WordDataset(self.words, self.word_conv)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True, collate_fn=WordDataset.collate_batch)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True, collate_fn=lambda batch: dataset.collate_batch(batch))
 
         epoch_num = 1
         last_time = time.time()
@@ -247,8 +248,8 @@ class WordGenerator:
 
 def main():
     BATCH_SIZE = 128
-    LEARN_RATE_INIT = 1e-2
-    LOSS_TARGET = 0.8
+    LEARN_RATE_INIT = 1e-3
+    LOSS_TARGET = 0.75
     GEN_NAMES_NUM = 30
     WORDS_NUM = -1
 

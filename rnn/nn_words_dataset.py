@@ -23,6 +23,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
@@ -134,7 +135,7 @@ class WordDataset(Dataset):
         return x, y
 
     def collate_batch(self, batch):
-        pad_value = self.word_conv.encode(WordLoader.WORD_END_CHAR)
+        pad_value = self.word_conv.encode(WordLoader.WORD_END_CHAR)[0]
 
         xs, ys = zip(*batch)
         xs_pad = pad_sequence(xs, batch_first=False, padding_value=pad_value)
@@ -147,10 +148,17 @@ class ModelTrainer:
 
     def __init__(self, model, words, vocab, lr):
         self.model = model
+        self.lr_init = lr
         self.words = words
         self.word_conv = WordConverter(vocab)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(model.parameters(), lr=lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(
+            self.optimizer,
+            factor=0.9,
+            patience=self.EPOCH_PRINT / 2,
+            min_lr=lr / 100
+        )
 
     def train(self, batch_size, loss_target):
         print(f"""Training started:
@@ -166,7 +174,13 @@ class ModelTrainer:
         self.model.train()
 
         dataset = WordDataset(self.words, self.word_conv)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True, collate_fn=lambda batch: dataset.collate_batch(batch))
+        loader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=True,
+            collate_fn=lambda batch: dataset.collate_batch(batch)
+        )
 
         epoch_num = 1
         last_time = time.time()
@@ -198,6 +212,8 @@ class ModelTrainer:
                 print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}")
                 break
 
+            self.scheduler.step(loss_mean)
+
             if epoch_num % self.EPOCH_PRINT == 0:
                 loss_mean_diff = loss_mean_last - loss_mean
                 loss_mean_last = loss_mean
@@ -206,7 +222,7 @@ class ModelTrainer:
                 elapsed_time = curr_time - last_time
                 last_time = curr_time
 
-                print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}, time: {elapsed_time:.3f}s")
+                print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}, lr: {self.__get_lr():.5f}, time: {elapsed_time:.3f}s")
 
             epoch_num += 1
 
@@ -248,8 +264,8 @@ class WordGenerator:
 
 def main():
     BATCH_SIZE = 128
-    LEARN_RATE_INIT = 1e-3
-    LOSS_TARGET = 0.75
+    LEARN_RATE_INIT = 1e-2
+    LOSS_TARGET = 0.7
     GEN_NAMES_NUM = 30
     WORDS_NUM = -1
 

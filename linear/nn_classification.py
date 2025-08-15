@@ -66,7 +66,7 @@ epoch_num = 100
 for epoch in range(epoch_num + 1):
     ir = torch.randperm(x.shape[0])
 
-    loss_sum = 0
+    loss_sum = 0.0
     num_batches = 0
     for i in range(0, x.shape[0], batch_size):
         idx = ir[i:i+batch_size]

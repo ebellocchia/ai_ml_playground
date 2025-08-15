@@ -320,8 +320,8 @@ class TextDataset(Dataset):
     @staticmethod
     def __get_sequences(text, seq_len):
         sequences = []
+        # 50% overlap between sequences
         for i in range(0, len(text) - seq_len, seq_len // 2):
-            # 50% overlap between sequences
             sequences.append(text[i:i+seq_len])
         return sequences
 
@@ -469,6 +469,10 @@ class ModelTrainer:
         return lr_scheduler.LambdaLR(optimizer, lr_fct)
 
 
+#
+# Generator
+#
+
 class TextGenerator:
     def __init__(self, model, vocab, seq_len):
         self.model = model
@@ -505,8 +509,13 @@ class TextGenerator:
             if len(text) > max_len or end_tag in text:
                 break
 
-        print("")
+        print()
 
+
+
+#
+# Main
+#
 
 def compute_model_parameters_num(n_layers, d_model, d_ff):
     mha = (d_model * d_model * 3) + (d_model * d_model)
@@ -515,10 +524,6 @@ def compute_model_parameters_num(n_layers, d_model, d_ff):
 
     return (mha + ff + ln) * n_layers
 
-
-#
-# Main
-#
 
 def main():
     class TrainingDataTypes(Enum):

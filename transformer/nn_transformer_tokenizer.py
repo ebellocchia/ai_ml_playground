@@ -429,7 +429,7 @@ class Device:
 
 
 class ModelTrainer:
-    ITER_PRINT = 1
+    EPOCH_PRINT = 1
 
     def __init__(self, model, text, tokenizer, lr, params_file_name):
         self.model = model
@@ -456,13 +456,13 @@ class ModelTrainer:
         except:
             return False
 
-    def train(self, batch_size, seq_len, loss_target):
+    def train(self, batch_size, seq_len, loss_target, loss_diff_min):
         try:
-            self.__train(batch_size, seq_len, loss_target)
+            self.__train(batch_size, seq_len, loss_target, loss_diff_min)
         except KeyboardInterrupt:
             print("Training stopped")
 
-    def __train(self, batch_size, seq_len, loss_target):
+    def __train(self, batch_size, seq_len, loss_target, loss_diff_min):
         self.model.train()
 
         dataset = Dataset.from_dict({"text": self.text}).map(
@@ -483,6 +483,7 @@ class ModelTrainer:
  - Batch size: {batch_size}
  - Sequence length: {seq_len}
  - Target loss: {loss_target}
+ - Minimum loss diff: {loss_diff_min}
  - Model: {self.model.__class__.__name__}
  - Criterion: {self.criterion.__class__.__name__}
  - Optimizer: {self.optimizer.__class__.__name__}
@@ -490,13 +491,12 @@ class ModelTrainer:
 """)
 
         epoch_num = 1
-        iter_num = 1
-        loss_mean = 0.0
-        loss_mean_iter = 0.0
-        loss_sum = 0.0
+        loss_mean_last = 0.0
         last_time = time.time()
-        stop = False
-        while not stop:
+
+        while True:
+            loss_sum = 0.0
+            num_batches = 0
             for batch in loader:
                 # x, y -> batch_size, seq_len
                 x = batch["x"].to(Device.get())
@@ -509,30 +509,35 @@ class ModelTrainer:
                     # y.view(...)   -> batch_size * seq_len
                     loss = self.criterion(out.view(-1, self.vocab_size), y.view(-1))
 
-                loss_sum += loss
-                loss_mean = loss_sum / iter_num
-                iter_num += 1
-
                 self.scaler.scale(loss).backward()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
 
+                loss_sum += loss.item()
+                num_batches += 1
+
             self.scheduler.step()
 
+            loss_mean = loss_sum / num_batches
             if loss_mean < loss_target:
                 print(f"{epoch_num}. Target loss reached, stopped. Loss: {loss_mean:.6f}, lr: {self.__get_lr():.5f}")
-                stop = True
                 break
 
-            if epoch_num % self.ITER_PRINT == 0:
-                loss_mean_iter_diff = (loss_mean_iter - loss_mean).abs()
-                loss_mean_iter = loss_mean
+            if epoch_num % self.EPOCH_PRINT == 0:
+                loss_mean_diff = loss_mean_last - loss_mean
+                loss_mean_last = loss_mean
+
+                if abs(loss_mean_diff) < loss_diff_min:
+                    print(
+                        f"{epoch_num}. Minimum loss difference reached, stopped. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}, lr: {self.__get_lr():.5f}"
+                    )
+                    break
 
                 curr_time = time.time()
                 elapsed_time = curr_time - last_time
                 last_time = curr_time
 
-                print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_iter_diff:.6f}, lr: {self.__get_lr():.5f}, time: {elapsed_time:.3f}s")
+                print(f"{epoch_num}. Loss: {loss_mean:.6f}, diff: {loss_mean_diff:.6f}, lr: {self.__get_lr():.5f}, time: {elapsed_time:.3f}s")
 
             epoch_num += 1
 
@@ -591,6 +596,10 @@ class TextGenerator:
         print()
 
 
+#
+# Main
+#
+
 def compute_model_parameters_num(n_layers, d_model, d_ff):
     mha = (d_model * d_model * 3) + (d_model * d_model)
     ff = (d_model * d_ff) * 2
@@ -599,15 +608,14 @@ def compute_model_parameters_num(n_layers, d_model, d_ff):
     return (mha + ff + ln) * n_layers
 
 
-#
-# Main
-#
-
 def main():
     class TrainingDataTypes(Enum):
         FAIRY_TALES = auto()
         SHAKESPEARE = auto()
 
+    #
+    # Constants
+    #
     TRAINING_DATA_LOADERS = {
         TrainingDataTypes.FAIRY_TALES: { "loader": FairyTalesLoader, "file": "tales.csv"},
         TrainingDataTypes.SHAKESPEARE: { "loader": ShakespeareLoader, "file": "shakespeare.txt"},
@@ -620,6 +628,7 @@ def main():
     D_FF = 2048
     LEARN_RATE = 1e-3
     LOSS_TARGET = 1.0
+    LOSS_DIFF_MIN = 1e-4
     TRAINING_DATA_TYPE = TrainingDataTypes.FAIRY_TALES
     PARAMS_FILE_NAME = f"params_tok_{TRAINING_DATA_TYPE.name.lower()}_b{BATCH_SIZE}_s{SEQ_LEN}__l{N_LAYERS}_m{D_MODEL}_h{N_HEAD}_f{D_FF}.pth"
 
@@ -655,7 +664,7 @@ def main():
         train_model = True
 
     if train_model:
-        model_trainer.train(BATCH_SIZE, SEQ_LEN, LOSS_TARGET)
+        model_trainer.train(BATCH_SIZE, SEQ_LEN, LOSS_TARGET, LOSS_DIFF_MIN)
         if model_trainer.save_params():
             print(f"Model parameters successfully saved to: {PARAMS_FILE_NAME}")
         else:

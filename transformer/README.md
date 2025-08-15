@@ -8,7 +8,5 @@ The transformer can be trained to:
 
 CUDA is used to speed up the training. Being a small model, I trained it on my laptop (NVIDIA RTX 4090 Mobile).
 
-The current implementation works character-by-character and the context length is 128 characters, so the generated output sounds like a fairy tale or a shakespeare writing, but the plot is not consistent and sentences don't really make sense (which is normal with a character-by-character training).\
-There is also not much variety because the dataset is small.\
-
-Next step is using a tokenizer instead of working character by character.
+`nn_transformer_charbychar.py`: it works character-by-character (i.e. the model learns to predict the next character depending on the previous ones). The generated output sounds like a fairy tale or a shakespeare writing, but the sentences don't really make sense (which is normal with a character-by-character training).
+`nn_transformer_tokenizer.py`: it uses a word-level tokenizer (i.e. the model learns to predict the next word depending on the previous ones). Since it learns word-by-word, the generated output is much better than the previous implementation. A word-level tokenizer is used because the vocabulary size is not very big, almost the same size of using a word-piece tokenizer. The raw HuggingFace tokenizer is used for learning purposes.

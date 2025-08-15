@@ -61,21 +61,30 @@ scheduler = lr_scheduler.LinearLR(
 mlp.train()
 
 batch_size = 8
-iter_print = 500
-iter_num = 3000
-for i in range(iter_num + 1):
-    ir = np.random.permutation(x.shape[0])[:batch_size]
-    xb, yb = x[ir], y[ir]
-    outputs = mlp(xb)
-    loss = criterion(outputs, yb)
+epoch_print = 5
+epoch_num = 100
+for epoch in range(epoch_num + 1):
 
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+    ir = torch.randperm(x.shape[0])
+    loss_sum = 0
+    num_batches = 0
+    for i in range(0, x.shape[0], batch_size):
+        idx = ir[i:i+batch_size]
+        xb, yb = x[idx], y[idx]
+        outputs = mlp(xb)
+        loss = criterion(outputs, yb)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        loss_sum += loss.item()
+        num_batches += 1
+
     scheduler.step()
 
-    if i % iter_print == 0:
-        print(f"{i}. Loss: {loss.item()}, lr: {scheduler.get_last_lr()[0]}")
+    if epoch % epoch_print == 0:
+        print(f"{epoch}. Loss: {loss_sum / num_batches}, lr: {scheduler.get_last_lr()[0]}")
 
 
 #

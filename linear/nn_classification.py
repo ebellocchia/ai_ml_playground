@@ -65,12 +65,12 @@ batch_size = 8
 epoch_print = 5
 epoch_num = 100
 for epoch in range(epoch_num + 1):
-    ir = torch.randperm(x.shape[0])
+    idx_perm = torch.randperm(x.shape[0])
 
     loss_sum = 0.0
     num_batches = 0
     for i in range(0, x.shape[0], batch_size):
-        idx = ir[i:i+batch_size]
+        idx = idx_perm[i:i+batch_size]
         xb, yb = x[idx], y[idx]
         outputs = mlp(xb)
         loss = criterion(outputs, yb)

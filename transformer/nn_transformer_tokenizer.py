@@ -439,7 +439,7 @@ class ModelTrainer:
         self.params_file_name = params_file_name
         self.criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.token_id(tokenizer.PAD))
         self.optimizer = optim.AdamW(model.parameters(), lr=lr)
-        self.scheduler = self.__get_scheduler(self.optimizer, 75)
+        self.scheduler = self.__get_scheduler(self.optimizer, 50)
         self.scaler = torch.amp.GradScaler(Device.get())
 
     def load_params(self):

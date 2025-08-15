@@ -363,7 +363,7 @@ class ModelTrainer:
         self.word_conv = WordConverter(vocab)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(model.parameters(), lr=lr)
-        self.scheduler = self.__get_scheduler(self.optimizer, 20)
+        self.scheduler = self.__get_scheduler(self.optimizer, 50)
         self.scaler = torch.amp.GradScaler(Device.get())
 
     def load_params(self):
@@ -548,7 +548,7 @@ def main():
     N_HEAD = 8
     D_FF = 2048
     LEARN_RATE = 1e-3
-    LOSS_TARGET = 0.5
+    LOSS_TARGET = 1.0
     LOSS_DIFF_MIN = 1e-4
     TRAINING_DATA_TYPE = TrainingDataTypes.FAIRY_TALES
     PARAMS_FILE_NAME = f"params_cbc_{TRAINING_DATA_TYPE.name.lower()}_b{BATCH_SIZE}_s{SEQ_LEN}__l{N_LAYERS}_m{D_MODEL}_h{N_HEAD}_f{D_FF}.pth"

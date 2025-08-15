@@ -248,7 +248,7 @@ class WordGenerator:
 def main():
     BATCH_SIZE = 128
     LEARN_RATE_INIT = 1e-2
-    LOSS_TARGET = 0.75
+    LOSS_TARGET = 0.8
     GEN_NAMES_NUM = 30
     WORDS_NUM = -1
 
